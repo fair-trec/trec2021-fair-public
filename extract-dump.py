@@ -18,7 +18,6 @@ from pathlib import Path
 import subprocess as sp
 import json
 import bz2
-import lzma
 from docopt import docopt
 
 import mwxml
@@ -28,7 +27,6 @@ _log = logging.getLogger('extract-dump')
 
 
 def load_dump(dump_file: Path):
-    _log.info('reading %s', dump_file)
     with bz2.open(dump_file) as bzf:
         dump = mwxml.Dump.from_file(bzf)
         for page in dump:
@@ -43,9 +41,10 @@ def process_dump(dump_file: Path):
     json_file = dump_file.parent / f'{stem}.json.zstd'
     _log.info('saving to %s', json_file)
 
-    child = sp.Popen(['zstd', '-9', '-o', fspath(json_file)], stdin=sp.PIPE)
+    child = sp.Popen(['zstd', '-9', '--no-progress', '-f', '-o', fspath(json_file)], stdin=sp.PIPE)
     jsf = child.stdin
 
+    _log.info('reading %s', dump_file)
     for id, title, text in tqdm(load_dump(dump_file)):
         obj = {'id': id, 'title': title, 'text': text}
         jsf.write(json.dumps(obj).encode('utf8'))
@@ -53,7 +52,9 @@ def process_dump(dump_file: Path):
     
     jsf.close()
     result = child.wait()
-    result.check_returncode()
+    if result:
+        _log.error('compressor exited with error %d', result)
+        sys.exit(2)
 
 
 def main(opts):

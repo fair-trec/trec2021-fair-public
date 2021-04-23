@@ -5,6 +5,7 @@ dependencies:
 - python=3.8
 - docopt
 - tqdm
+- zstd
 # dev environment
 - flake8
 - ipython
