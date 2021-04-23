@@ -1,0 +1,9 @@
+data/*.bz2
+data/*.gz
+data/*.lzma
+data/*.zstd
+*.crdownload
+.DS_Store/
+.venv/
+build/
+__pycache__/

@@ -1,0 +1,12 @@
+name: wptrec
+channels:
+- conda-forge
+dependencies:
+- python=3.8
+- docopt
+- tqdm
+# dev environment
+- flake8
+- ipython
+- pip:
+  - mwxml
