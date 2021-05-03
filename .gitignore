@@ -2,6 +2,7 @@ data/*.bz2
 data/*.gz
 data/*.lzma
 data/*.zstd
+*.bak
 *.crdownload
 .DS_Store/
 .venv/

@@ -13,11 +13,12 @@ Options:
 
 import logging
 import sys
+from contextlib import contextmanager
 from os import fspath
 from pathlib import Path
 import subprocess as sp
 import json
-import bz2
+import bz2, gzip
 from docopt import docopt
 
 import mwxml
@@ -36,26 +37,35 @@ def load_dump(dump_file: Path):
                 yield page.id, page.title, text
 
 
-def process_dump(dump_file: Path):
-    stem = dump_file.name.replace('.xml.bz2', '')
-    json_file = dump_file.parent / f'{stem}.json.zstd'
-    _log.info('saving to %s', json_file)
+@contextmanager
+def open_compress_7z(file: Path):
+    if file.exists():
+        file.unlink()
 
-    child = sp.Popen(['zstd', '-9', '--no-progress', '-f', '-o', fspath(json_file)], stdin=sp.PIPE)
-    jsf = child.stdin
-
-    _log.info('reading %s', dump_file)
-    for id, title, text in tqdm(load_dump(dump_file)):
-        obj = {'id': id, 'title': title, 'text': text}
-        jsf.write(json.dumps(obj).encode('utf8'))
-        jsf.write(b'\n')
+    cmd = ['7z', 'a', fspath(file), '-tgzip', f'-si{file.stem}', '-bd', '-mx=9']
+    _log.info('running %s', ' '.join(cmd))
+    child = sp.Popen(cmd, stdin=sp.PIPE)
     
+    yield jsf
     jsf.close()
     result = child.wait()
     if result:
         _log.error('compressor exited with error %d', result)
         sys.exit(2)
 
+
+def process_dump(dump_file: Path):
+    stem = dump_file.name.replace('.xml.bz2', '')
+    json_file = dump_file.parent / f'{stem}.json.gz'
+    _log.info('saving to %s', json_file)
+
+    with gzip.open(json_file, 'wb', 9) as jsf:
+        _log.info('reading %s', dump_file)
+        for id, title, text in tqdm(load_dump(dump_file)):
+            obj = {'id': id, 'title': title, 'text': text, 'url': f'https://en.wikipedia.org/wiki/{title}'}
+            jsf.write(json.dumps(obj).encode('utf8'))
+            jsf.write(b'\n')
+    
 
 def main(opts):
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
