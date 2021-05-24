@@ -7,6 +7,8 @@ Usage:
 Options:
     DUMP
         Process dump file DUMP
+    -o FILE
+        Write output to FILE [default: trec_corpus.json.gz]
     --verbose
         Turn on verbose logging.
 """
@@ -54,9 +56,7 @@ def open_compress_7z(file: Path):
         sys.exit(2)
 
 
-def process_dump(dump_file: Path):
-    stem = dump_file.name.replace('.xml.bz2', '')
-    json_file = dump_file.parent / f'{stem}.json.gz'
+def process_dump(dump_file: Path, json_file: Path):
     _log.info('saving to %s', json_file)
 
     with gzip.open(json_file, 'wb', 9) as jsf:
@@ -73,7 +73,8 @@ def main(opts):
     logging.basicConfig(stream=sys.stderr, level=level)
 
     file = Path(opts['DUMP'])
-    process_dump(file)
+    out = Path(opts['-o'])
+    process_dump(file, out)
 
 
 
