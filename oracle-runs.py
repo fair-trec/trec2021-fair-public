@@ -72,7 +72,7 @@ def task1_run(opts, meta, topics):
     runs.columns.name = 'rank'
     runs = runs.stack().reset_index(name='page_id')
     _log.info('samples runs:\n%s', runs)
-    return runs
+    return runs[['id', 'page_id']]
 
 def main(opts):
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
