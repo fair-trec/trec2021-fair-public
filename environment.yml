@@ -3,9 +3,12 @@ channels:
 - conda-forge
 dependencies:
 - python=3.8
+- pip
 - docopt
 - tqdm
 - 7zip
+- numpy>=1.17
+- pandas>=1.2
 # dev environment
 - flake8
 - ipython
