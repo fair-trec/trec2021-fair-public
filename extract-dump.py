@@ -62,7 +62,8 @@ def process_dump(dump_file: Path):
     with gzip.open(json_file, 'wb', 9) as jsf:
         _log.info('reading %s', dump_file)
         for id, title, text in tqdm(load_dump(dump_file)):
-            obj = {'id': id, 'title': title, 'text': text, 'url': f'https://en.wikipedia.org/wiki/{title}'}
+            ut = title.replace(' ', '_')
+            obj = {'id': id, 'title': title, 'text': text, 'url': f'https://en.wikipedia.org/wiki/{ut}'}
             jsf.write(json.dumps(obj).encode('utf8'))
             jsf.write(b'\n')
     
