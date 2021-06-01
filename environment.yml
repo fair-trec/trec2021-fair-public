@@ -9,6 +9,7 @@ dependencies:
 - 7zip
 - numpy>=1.17
 - pandas>=1.2
+- notebook
 # dev environment
 - flake8
 - ipython
