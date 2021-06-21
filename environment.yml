@@ -9,7 +9,10 @@ dependencies:
 - 7zip
 - numpy>=1.17
 - pandas>=1.2
+- scipy
+- seaborn
 - notebook
+- jupytext
 # dev environment
 - flake8
 - ipython
