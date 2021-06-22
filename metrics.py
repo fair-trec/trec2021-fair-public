@@ -2,9 +2,22 @@
 Implementation of metrics for TREC Fair Ranking 2021.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import jensenshannon
+
+_log = logging.getLogger('metrics')
+
+world_pop = pd.Series({
+    'Africa': 0.155070563,
+    'Antarctica': 1.54424E-07,
+    'Asia': 0.600202585,
+    'Europe': 0.103663858,
+    'Latin America and the Caribbean': 0.08609797,
+    'Northern America': 0.049616733,
+    'Oceania': 0.005348137,
+})
 
 
 def qr_ndcg(qrun, qrels, tgt_n=100):
@@ -127,3 +140,28 @@ class Task1Metric:
             'AWRF': awrf,
             'Score': ndcg * awrf
         })
+
+    @classmethod
+    def load(cls, meta_file, topic_file):
+        _log.info('reading page metadata from %s', meta_file)
+        pages = pd.read_json(meta_file, lines=True)
+        page_exp = pages[['page_id', 'geographic_locations']].explode('geographic_locations')
+
+        _log.info('computing page alignments')
+        page_align = page_exp.assign(x=1).pivot(index='page_id', columns='geographic_locations', values='x')
+        page_align = page_align.iloc[:, 1:]
+        page_align.fillna(0, inplace=True)
+
+        _log.info('reading topics from %s', topic_file)
+        topics = pd.read_json(topic_file, lines=True)
+        qrels = topics[['id', 'rel_docs']].explode('rel_docs').reset_index(drop=True)
+
+        _log.info('computing query alignments')
+        qalign = qrels.join(page_align, on='rel_docs').groupby('id').sum()
+        # normalize query alignments
+        qa_sums = qalign.sum(axis=1)
+        qalign = qalign.divide(qa_sums, axis=0)
+
+        qtarget = (qalign + world_pop) * 0.5
+
+        return cls(qrels.set_index('id'), page_align, qtarget)

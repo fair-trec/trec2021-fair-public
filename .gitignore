@@ -2,6 +2,8 @@ data/*.bz2
 data/*.gz
 data/*.lzma
 data/*.zstd
+*.pkl
+*.pkl.gz
 *.bak
 *.crdownload
 .DS_Store/
