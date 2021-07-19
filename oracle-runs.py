@@ -20,6 +20,7 @@ Options:
 import sys
 from pathlib import Path
 import logging
+from tqdm import tqdm
 from docopt import docopt
 
 import pandas as pd
@@ -71,12 +72,38 @@ def task1_run(opts, meta, topics):
     runs = rels.groupby('id').apply(sample)
     runs.columns.name = 'rank'
     runs = runs.stack().reset_index(name='page_id')
-    _log.info('samples runs:\n%s', runs)
+    _log.info('sample runs:\n%s', runs)
     return runs[['id', 'page_id']]
+
+
+def task2_run(opts, meta, topics):
+    rng = np.random.default_rng()
+    rank_len = 50
+    run_count = 100
+    prec = float(opts['--precision'])
+
+    rels = topics[['id', 'rel_docs']].set_index('id').explode('rel_docs')
+
+    def one_sample(df):
+        return sample_docs(rng, meta, df['rel_docs'], rank_len, prec)
+    
+    def multi_sample(df):
+        runs = dict((i+1, one_sample(df)) for i in tqdm(range(run_count), 'reps', leave=False))
+        rdf = pd.DataFrame(runs)
+        rdf.columns.name = 'rep_number'
+        rdf.index.name = 'rank'
+        return rdf.T
+    
+    runs = rels.groupby('id').progress_apply(multi_sample)
+    runs = runs.stack().reset_index(name='page_id')
+    _log.info('multi-sample runs:\n%s', runs)
+    return runs[['id', 'rep_number', 'page_id']]
+
 
 def main(opts):
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
     logging.basicConfig(stream=sys.stderr, level=level)
+    tqdm.pandas()
 
     meta = load_metadata()
     topics = load_topics()
@@ -84,6 +111,11 @@ def main(opts):
     if opts['--task1']:
         runs = task1_run(opts, meta, topics)
         dft_out = 'task1.tsv'
+    elif opts['--task2']:
+        runs = task2_run(opts, meta, topics)
+        dft_out = 'task2.tsv'
+    else:
+        raise ValueError('no task specified')
     
     out_file = opts.get('-o', dft_out)
     _log.info('writing to %s', out_file)
