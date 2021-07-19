@@ -5,6 +5,9 @@ This code is example implementations of the TREC 2021 metrics.
 The `environment.yml` file defines a Conda environment that contains all required
 dependencies.
 
+Save the data files from [Fair TREC](https://fair-trec.github.io) into the `data`
+directory before running this code.
+
 ## Oracle Runs
 
 The `oracle-runs.py` file generates oracle runs from the training queries, with
