@@ -1,3 +1,4 @@
+.ipynb_checkpoints/*
 data/*.bz2
 data/*.gz
 data/*.lzma

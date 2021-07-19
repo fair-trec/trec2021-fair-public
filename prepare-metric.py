@@ -8,11 +8,13 @@ data embedded in it.  Code wanting to evaluate runs can unpickle the metric and 
 to their runs.  By default, this file is gzip-compressed.
 
 Usage:
-    prepare-metric.py [options] --task1
+    prepare-metric.py [options] (--task1 | --task2)
 
 Options:
     --task1
         Compile the Task 1 metric.
+    --task2
+        Compile the Task 2 metric.
     --topics FILE
         Read topics and qrels from FILE [default: data/trec_topics.json.gz].
     -o FILE, --output FILE
@@ -46,6 +48,9 @@ def main(opts):
     if opts['--task1']:
         metric = metrics.Task1Metric.load(meta_file, topic_file)
         dft_out = 'Task1Metric.pkl.gz'
+    elif opts['--task2']:
+        metric = metrics.Task2Metric.load(meta_file, topic_file)
+        dft_out = 'Task2Metric.pkl.gz'
     
     out_file = opts['--output']
     if out_file is None:

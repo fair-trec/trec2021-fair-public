@@ -103,7 +103,7 @@ def task2_run(opts, meta, topics):
 def main(opts):
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
     logging.basicConfig(stream=sys.stderr, level=level)
-    tqdm.pandas()
+    tqdm.pandas(leave=False)
 
     meta = load_metadata()
     topics = load_topics()

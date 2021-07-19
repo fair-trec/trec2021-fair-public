@@ -13,6 +13,7 @@ dependencies:
 - seaborn
 - notebook
 - jupytext
+- ipywidgets
 # dev environment
 - flake8
 - ipython

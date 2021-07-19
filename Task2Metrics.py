@@ -14,13 +14,13 @@
 # ---
 
 # %% [markdown]
-# # Task 1 Metrics
+# # Task 2 Metrics
 #
-# This notebook demonstrates measuring performance on Task 1.
+# This notebook demonstrates measuring performance on Task 2.
 #
 # Before you can measure performance, you need to *prepare* the metric, by running:
 #
-#     python prepare-metric.py --task1
+#     python prepare-metric.py --task2
 #     
 # If preparing for the evaluation queries, use a the `--topics` option to specify an alternate topic file (this will not work until evaluation qrels are released).
 
@@ -34,8 +34,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import gzip
 import pickle
+import gzip
 
 # %%
 from tqdm.auto import tqdm
@@ -47,11 +47,11 @@ import metrics
 # %% [markdown]
 # ## Load Metric
 #
-# We will first load the metric:
+# We will load the compiled metric:
 
 # %%
-with gzip.open('Task1Metric.pkl.gz') as mpf:
-    t1_metric = pickle.load(mpf)
+with gzip.open('Task2Metric.pkl.gz', 'r') as mpf:
+    t2_metric = pickle.load(mpf)
 
 # %% [markdown]
 # ## Apply the Metric
@@ -59,23 +59,23 @@ with gzip.open('Task1Metric.pkl.gz') as mpf:
 # Let's load a run:
 
 # %%
-run09 = pd.read_csv('runs/task1-prec09.csv')
+run09 = pd.read_csv('runs/task2-prec09.csv')
 run09
 
 # %% [markdown]
 # Let's score each query with our metric:
 
 # %%
-met09 = run09.groupby('id')['page_id'].apply(t1_metric).unstack()
+met09 = run09.groupby('id').progress_apply(t2_metric)
 met09.head()
 
 # %%
 met09.plot.box()
 
 # %% [markdown]
-# Let's plot the utility-fairness tradeoff for our topics:
+# Look at the relevance-disparity relationship:
 
 # %%
-sns.relplot(x='nDCG', y='AWRF', data=met09)
+sns.relplot(x='EE-D', y='EE-R', data=met09)
 
 # %%
