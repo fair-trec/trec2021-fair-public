@@ -18,7 +18,14 @@ world_pop = pd.Series({
     'Northern America': 0.049616733,
     'Oceania': 0.005348137,
 })
-
+work_order = [
+    'Stub',
+    'Start',
+    'C',
+    'B',
+    'GA',
+    'FA',
+]
 
 def discount(n_or_ranks):
     """
@@ -236,6 +243,33 @@ def qrs_exposure(qruns, page_align):
     return exp
 
 
+def qw_tgt_exposure(qw_counts: pd.Series) -> pd.Series:
+    """
+    Compute the target exposure for each work level for a query.
+
+    Args:
+        qw_counts(pandas.Series):
+            The number of articles the query has for each work level.
+    
+    Returns:
+        pandas.Series:
+            The per-article target exposure for each work level.
+    """
+    if 'id' == qw_counts.index.names[0]:
+        qw_counts = qw_counts.reset_index(level='id', drop=True)
+    qwc = qw_counts.reindex(work_order, fill_value=0).astype('i4')
+    tot = int(qwc.sum())
+    da = discount(tot)
+    qwp = qwc.shift(1, fill_value=0)
+    qwc_s = qwc.cumsum()
+    qwp_s = qwp.cumsum()
+    res = pd.Series(
+        [np.mean(da[s:e]) for (s, e) in zip(qwp_s, qwc_s)],
+        index=qwc.index
+    )
+    return res
+
+
 class Task2Metric:
     """
     Task 2 metric implementation.
@@ -251,7 +285,7 @@ class Task2Metric:
     frame that you are grouping by more than one column.
     """
 
-    def __init__(self, qrels, page_align, qtgts):
+    def __init__(self, qrels, page_align, page_work, qtgts):
         """
         Construct Task 2 metric.
 
@@ -265,6 +299,7 @@ class Task2Metric:
         """
         self.qrels = qrels
         self.page_align = page_align
+        self.page_work = page_work
         self.qtgts = qtgts
     
     def __call__(self, sequence):
@@ -297,12 +332,40 @@ class Task2Metric:
         page_align.rename(columns={np.nan: 'Unknown'}, inplace=True)
         page_align.fillna(0, inplace=True)
 
+        _log.info('computing page work needed')
+        page_work = pages.set_index('page_id').quality_score_disc.astype(pd.CategoricalDtype(ordered=True))
+        page_work = page_work.cat.reorder_categories(work_order)
+        page_work.name = 'quality'
+
         _log.info('reading topics from %s', topic_file)
         topics = pd.read_json(topic_file, lines=True)
         qrels = topics[['id', 'rel_docs']].explode('rel_docs').reset_index(drop=True)
 
-        _log.info('computing query alignments')
-        qalign = qrels.join(page_align, on='rel_docs').groupby('id').sum()
+        _log.info('computing work-needed per page')
+        qpw = qrels.join(page_work, on='rel_docs')
+
+        _log.info('computing per-query distribution of page work')
+        qwork = qpw.groupby(['id', 'quality'])['rel_docs'].count()
+        qw_pp_target = qwork.groupby('id').apply(qw_tgt_exposure)
+        qw_pp_target.name = 'tgt_exposure'
+        print(qw_pp_target)
+
+        _log.info('computing expected target exposure of each page')
+        qp_exp = qpw.join(qw_pp_target, on=['id', 'quality'])
+        qp_exp = qp_exp.set_index(['id', 'rel_docs'])['tgt_exposure']
+        qp_exp.index.names = ['q_id', 'page_id']
+        print(qp_exp)
+
+        _log.info('computing query page alignments')
+        qp_align = qrels.join(page_align, on='rel_docs').set_index(['id', 'rel_docs'])
+        qp_align.index.names = ['q_id', 'page_id']
+        print(qp_align)
+
+        _log.info('computing query targets')
+        qp_exp, qp_align = qp_exp.align(qp_align, fill_value=0)
+        
+        qp_aexp = qp_align.multiply(qp_exp, axis=0)
+        qalign = qp_aexp.groupby('q_id').sum()
 
         # now some things get tricky. we need to average the *known* items with the
         # world population. so let's start by normalizing, then denormalizing
@@ -318,5 +381,6 @@ class Task2Metric:
         qtarget = qalign[['Unknown']].join(qa_known)
         # and finally *actually* normalize the target distributions
         qtarget = qtarget.divide(qtarget.sum(axis=1), axis=0)
+        print(qtarget)
 
-        return cls(qrels.set_index('id'), page_align, qtarget)
+        return cls(qrels.set_index('id'), page_align, page_work, qtarget)
