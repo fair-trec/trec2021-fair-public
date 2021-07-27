@@ -119,7 +119,7 @@ def main(opts):
     
     out_file = opts.get('-o', dft_out)
     _log.info('writing to %s', out_file)
-    runs.to_csv(out_file, index=False)
+    runs.to_csv(out_file, index=False, sep='\t')
 
 
 if __name__ == '__main__':

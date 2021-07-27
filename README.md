@@ -14,7 +14,7 @@ The `oracle-runs.py` file generates oracle runs from the training queries, with
 a specified precision.  For example, to generate runs for Task 2 with precision
 0.9, run:
 
-    python .\oracle-runs.py -p 0.9 --task2 -o runs/task2-prec09.csv
+    python .\oracle-runs.py -p 0.9 --task2 -o runs/task2-prec09.tsv
 
 These are useful for seeing the output format, and for testing metrics.
 
