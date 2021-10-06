@@ -76,7 +76,7 @@ runs.head()
 # We also need to load our topic eval data:
 
 # %%
-topics = pd.read_json('data/eval-topics.json.gz', lines=True)
+topics = pd.read_json('data/eval-topics-with-qrels.json.gz', lines=True)
 topics.head()
 
 # %% [markdown]
