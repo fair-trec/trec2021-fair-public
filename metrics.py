@@ -106,7 +106,8 @@ def qr_awrf(qrun, page_align, qtgt):
     disc = discount(n)
 
     # get the page alignments
-    ralign = page_align.loc[qrun]
+    #ralign = page_align.loc[qrun]
+    ralign = page_align.reindex(qrun)
     # discount and compute the weighted sum
     ralign = ralign.multiply(disc, axis=0)
     ralign = ralign.sum(axis=0) / np.sum(disc)
@@ -125,7 +126,7 @@ class Task1Metric:
     callable, and usable directly as the function in a Pandas :meth:`pandas.DataFrameGroupBy.apply`
     call on a data frame that has been grouped by query identifier::
 
-        run.groupby('qid')['doc_id'].apply(metric)
+        run.groupby('qid')['page_id'].apply(metric)
 
     Since :meth:`__call__` extracts query ID directly from the name, this doesn't work if you
     have a frame that you are grouping by more than one column.
@@ -148,7 +149,10 @@ class Task1Metric:
         self.qtgts = qtgts
     
     def __call__(self, run):
-        qid = run.name
+        if isinstance(run.name, tuple):
+            qid = run.name[-1]
+        else:
+            qid = run.name
         qrel = self.qrels.loc[qid]
         qtgt = self.qtgts.loc[qid]
 
@@ -156,39 +160,14 @@ class Task1Metric:
         assert ndcg >= 0
         assert ndcg <= 1
         awrf = qr_awrf(run, self.page_align, qtgt)
-        assert awrf >= 0
-        assert awrf <= 1
+        # assert awrf >= 0
+        # assert awrf <= 1
 
         return pd.Series({
             'nDCG': ndcg,
             'AWRF': awrf,
             'Score': ndcg * awrf
         })
-
-    @classmethod
-    def load(cls, meta_file, topic_file):
-        _log.info('reading page metadata from %s', meta_file)
-        pages = pd.read_json(meta_file, lines=True)
-        page_exp = pages[['page_id', 'geographic_locations']].explode('geographic_locations')
-
-        _log.info('computing page alignments')
-        page_align = page_exp.assign(x=1).pivot(index='page_id', columns='geographic_locations', values='x')
-        page_align = page_align.iloc[:, 1:]
-        page_align.fillna(0, inplace=True)
-
-        _log.info('reading topics from %s', topic_file)
-        topics = pd.read_json(topic_file, lines=True)
-        qrels = topics[['id', 'rel_docs']].explode('rel_docs').reset_index(drop=True)
-
-        _log.info('computing query alignments')
-        qalign = qrels.join(page_align, on='rel_docs').groupby('id').sum()
-        # normalize query alignments
-        qa_sums = qalign.sum(axis=1)
-        qalign = qalign.divide(qa_sums, axis=0)
-
-        qtarget = (qalign + world_pop) * 0.5
-
-        return cls(qrels.set_index('id'), page_align, qtarget)
 
 
 def qr_exposure(qrun, page_align):
@@ -211,7 +190,7 @@ def qr_exposure(qrun, page_align):
     disc = discount(n)
 
     # get the page alignments
-    ralign = page_align.loc[qrun]
+    ralign = page_align.reindex(qrun)
     # discount and compute the weighted sum
     ralign = ralign.multiply(disc, axis=0)
     ralign = ralign.sum(axis=0)
@@ -236,7 +215,7 @@ def qrs_exposure(qruns, page_align):
             Each group's expected exposure for the ranking.
     """
 
-    rexp = qruns.groupby('rep_number')['page_id'].apply(qr_exposure, page_align=page_align)
+    rexp = qruns.groupby('seq_no')['page_id'].apply(qr_exposure, page_align=page_align)
     exp = rexp.unstack().fillna(0).mean(axis=0)
     assert len(exp) == page_align.shape[1]
 
@@ -279,7 +258,7 @@ class Task2Metric:
     :meth:`pandas.DataFrameGroupBy.apply` call on a data frame that has been grouped by query
     identifier::
 
-        run.groupby('qid')['doc_id'].apply(metric)
+        run.groupby('qid').apply(metric)
 
     Since :meth:`__call__` extracts query ID directly from the name, this doesn't work if you have a
     frame that you are grouping by more than one column.
@@ -303,7 +282,10 @@ class Task2Metric:
         self.qtgts = qtgts
     
     def __call__(self, sequence):
-        qid = sequence.name
+        if isinstance(sequence.name, tuple):
+            qid = sequence.name[-1]
+        else:
+            qid = sequence.name
         qtgt = self.qtgts.loc[qid]
 
         s_exp = qrs_exposure(sequence, self.page_align)
@@ -320,67 +302,3 @@ class Task2Metric:
             'EE-D': ee_disp,
             'EE-R': ee_rel,
         })
-
-    @classmethod
-    def load(cls, meta_file, topic_file):
-        _log.info('reading page metadata from %s', meta_file)
-        pages = pd.read_json(meta_file, lines=True)
-        page_exp = pages[['page_id', 'geographic_locations']].explode('geographic_locations')
-
-        _log.info('computing page alignments')
-        page_align = page_exp.assign(x=1).pivot(index='page_id', columns='geographic_locations', values='x')
-        page_align.rename(columns={np.nan: 'Unknown'}, inplace=True)
-        page_align.fillna(0, inplace=True)
-
-        _log.info('computing page work needed')
-        page_work = pages.set_index('page_id').quality_score_disc.astype(pd.CategoricalDtype(ordered=True))
-        page_work = page_work.cat.reorder_categories(work_order)
-        page_work.name = 'quality'
-
-        _log.info('reading topics from %s', topic_file)
-        topics = pd.read_json(topic_file, lines=True)
-        qrels = topics[['id', 'rel_docs']].explode('rel_docs').reset_index(drop=True)
-
-        _log.info('computing work-needed per page')
-        qpw = qrels.join(page_work, on='rel_docs')
-
-        _log.info('computing per-query distribution of page work')
-        qwork = qpw.groupby(['id', 'quality'])['rel_docs'].count()
-        qw_pp_target = qwork.groupby('id').apply(qw_tgt_exposure)
-        qw_pp_target.name = 'tgt_exposure'
-        print(qw_pp_target)
-
-        _log.info('computing expected target exposure of each page')
-        qp_exp = qpw.join(qw_pp_target, on=['id', 'quality'])
-        qp_exp = qp_exp.set_index(['id', 'rel_docs'])['tgt_exposure']
-        qp_exp.index.names = ['q_id', 'page_id']
-        print(qp_exp)
-
-        _log.info('computing query page alignments')
-        qp_align = qrels.join(page_align, on='rel_docs').set_index(['id', 'rel_docs'])
-        qp_align.index.names = ['q_id', 'page_id']
-        print(qp_align)
-
-        _log.info('computing query targets')
-        qp_exp, qp_align = qp_exp.align(qp_align, fill_value=0)
-        
-        qp_aexp = qp_align.multiply(qp_exp, axis=0)
-        qalign = qp_aexp.groupby('q_id').sum()
-
-        # now some things get tricky. we need to average the *known* items with the
-        # world population. so let's start by normalizing, then denormalizing
-        qa_known = qalign.drop(columns=['Unknown'])
-        # avoid divide-by-zero
-        qa_ksums = qa_known.sum(axis=1)
-        qa_kd = qa_known.divide(np.maximum(qa_ksums, 1.0e-6), axis=0)
-        qa_kd = (qa_kd + world_pop) * 0.5
-        # if something has *no* known-alignment things, it will require no
-        # alignments. That seems unlikely!
-        qa_known = qa_kd.multiply(qa_ksums, axis=0)
-        
-        qtarget = qalign[['Unknown']].join(qa_known)
-        # and finally *actually* normalize the target distributions
-        qtarget = qtarget.divide(qtarget.sum(axis=1), axis=0)
-        print(qtarget)
-
-        return cls(qrels.set_index('id'), page_align, page_work, qtarget)

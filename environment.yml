@@ -6,12 +6,15 @@ dependencies:
 - pip
 - docopt
 - tqdm
-- 7zip
 - numpy>=1.17
 - pandas>=1.2
+- binpickle
 - scipy
 - seaborn
+- xarray
+- pandas
 - notebook
+- jupyterlab>=3.0
 - jupytext
 - ipywidgets
 # dev environment
@@ -19,3 +22,4 @@ dependencies:
 - ipython
 - pip:
   - mwxml
+  - natural

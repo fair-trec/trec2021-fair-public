@@ -90,14 +90,14 @@ def task2_run(opts, meta, topics):
     def multi_sample(df):
         runs = dict((i+1, one_sample(df)) for i in tqdm(range(run_count), 'reps', leave=False))
         rdf = pd.DataFrame(runs)
-        rdf.columns.name = 'rep_number'
+        rdf.columns.name = 'seq_no'
         rdf.index.name = 'rank'
         return rdf.T
     
     runs = rels.groupby('id').progress_apply(multi_sample)
     runs = runs.stack().reset_index(name='page_id')
     _log.info('multi-sample runs:\n%s', runs)
-    return runs[['id', 'rep_number', 'page_id']]
+    return runs[['id', 'seq_no', 'page_id']]
 
 
 def main(opts):

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -36,6 +36,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import gzip
 import pickle
+import binpickle
 
 # %%
 from tqdm.auto import tqdm
@@ -50,8 +51,7 @@ import metrics
 # We will first load the metric:
 
 # %%
-with gzip.open('Task1Metric.pkl.gz') as mpf:
-    t1_metric = pickle.load(mpf)
+t1_metric = binpickle.load('task1-train-geo-metric.bpk')
 
 # %% [markdown]
 # ## Apply the Metric

@@ -5,7 +5,11 @@ data/*.lzma
 data/*.zstd
 *.pkl
 *.pkl.gz
+*.bpk
 *.bak
+*.zip
+*.tar
+*.tar.gz
 *.crdownload
 .DS_Store/
 .venv/
