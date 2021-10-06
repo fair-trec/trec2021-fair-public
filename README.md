@@ -15,7 +15,9 @@ crucial notes on the limitations, warnings, and limitations, and ethical conside
 of this data.
 
 Save the data files from [Fair TREC](https://fair-trec.github.io) into the `data`
-directory before running this code.
+directory before running this code.  You can find all data files except the qrels
+at <https://data.boisestate.edu/library/Ekstrand-2021/TRECFairRanking2021/>; the
+qrels are in the TREC Archive.
 
 ## Oracle Runs
 
