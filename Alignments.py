@@ -16,7 +16,11 @@
 # %% [markdown]
 # # Alignments
 #
-# This notebook analyzes page alignments and prepares metrics for final use.
+# This notebook analyzes page alignments and prepares metrics for final use.  It needs to be run to create the serialized alignment data files the metrics require.
+#
+# Its final output is **pickled metric objects**: an instance of the Task 1 and Task 2 metric classes, serialized to a compressed file with [binpickle][].
+#
+# [binpickle]: https://binpickle.lenskit.org
 
 # %% [markdown]
 # ## Setup
@@ -34,6 +38,9 @@ import gzip
 import pickle
 import binpickle
 from natural.size import binarysize
+
+# %% [markdown]
+# We're going to use ZStandard compression to save our metrics, so let's create a codec object:
 
 # %%
 codec = binpickle.codecs.Blosc('zstd')
@@ -150,9 +157,14 @@ work_order = [
 ]
 
 # %% [markdown]
+# Now all our background data is set up.
+
+# %% [markdown]
 # ## Query Relevance
 #
 # We now need to get the qrels for the topics.  This is done by creating frames with entries for every relevant document; missing documents are assumed irrelevant (0).
+#
+# In the individual metric evaluation files, we will truncate each run to only the assessed documents (with a small amount of noise), so this is a safe way to compute.
 #
 # First the training topics:
 

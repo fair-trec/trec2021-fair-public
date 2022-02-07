@@ -111,6 +111,8 @@ def qr_awrf(qrun, page_align, qtgt):
     # discount and compute the weighted sum
     ralign = ralign.multiply(disc, axis=0)
     ralign = ralign.sum(axis=0) / np.sum(disc)
+    if np.sum(ralign) == 0:
+        ralign = np.ones_like(ralign)
     # now we have an alignment vector
     dist = jensenshannon(ralign, qtgt)
     # JS distance is sqrt of divergence

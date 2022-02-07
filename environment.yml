@@ -8,6 +8,7 @@ dependencies:
 - tqdm
 - numpy>=1.17
 - pandas>=1.2
+- seedbank
 - binpickle
 - scipy
 - seaborn
